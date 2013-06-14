@@ -1,2 +1,1 @@
-Hadoop-MapReduce-and-Pig
-========================
+Hadoop MapReduce programs using Java and Pig scripting
