@@ -1,0 +1,149 @@
+/*
+ * RONALD INSELBERG
+ * Assignment Three, Part Two
+ *
+ * For each year, find the movie with the highest weight and the actors that played in that movie.
+ * Expected output: movie title, year, weight, (comma separated list of actors)
+ *
+ * Read in data from imdb-weights file.
+ * Read input data in tsv ( tab-separated values) format. Record fields are movie, year and weight.
+ * USING PigStorage('\t') specifies that data fields are seperated by tab characters; this is explicit.
+ * Could have omitted this and it would work the same by default.
+ */
+movieYearAndWeight = LOAD 'imdb-weights.tsv' USING PigStorage('\t') AS (movie:chararray, year:int, weight:float);
+/*
+ *
+ * Remove any/all imdb-weights data records that are not conformant.
+ */
+movieYearAndWeight = FILTER movieYearAndWeight BY movie IS NOT NULL;
+movieYearAndWeight = FILTER movieYearAndWeight BY year IS NOT NULL;
+movieYearAndWeight = FILTER movieYearAndWeight BY weight IS NOT NULL;
+DESCRIBE movieYearAndWeight;
+dumpRecords = LIMIT movieYearAndWeight 10;
+DUMP dumpRecords;
+/*
+ *
+ * For each year in the imdb-weights data, find the movie with the highest weight for that year.
+ *
+ */
+groupByYear = GROUP movieYearAndWeight BY year;
+sortByWeight = FOREACH groupByYear {
+  sorted = ORDER movieYearAndWeight BY weight DESC;
+	GENERATE group, sorted;
+};
+highestRankedMovieRaw = FOREACH sortByWeight {
+	highest = LIMIT sorted 1;
+	GENERATE FLATTEN(highest) AS (movie:chararray, year:int, weight:float);
+};
+DESCRIBE highestRankedMovieRaw;
+dumpRecords = LIMIT highestRankedMovieRaw 10;
+DUMP dumpRecords;
+/*
+ *
+ * Reorganize the highest ranked movie of the year data, using (movie, year) as the group or key to the data.
+ * Count and dump the number of rows (records).
+ */
+highestRankedMovie = FOREACH highestRankedMovieRaw GENERATE TOTUPLE(movie, year), weight;
+DESCRIBE highestRankedMovie;
+highestRankedMovieAll = GROUP highestRankedMovie ALL;
+highestRankedMovieCount = FOREACH highestRankedMovieAll GENERATE '***** highestRankedMovie: number of rows ', COUNT_STAR(highestRankedMovie);
+DUMP highestRankedMovieCount;
+dumpRecords = LIMIT highestRankedMovie 10;
+DUMP dumpRecords;
+/*
+ *
+ * Read in data from imdb file.
+ * Read input data in tsv ( tab-separated values) format. Record fields are actor, movie and year.
+ *
+ */
+actorMovieAndYear = LOAD 'imdb.tsv' USING PigStorage('\t') AS (actor:chararray, movie:chararray, year:int);
+/*
+ *
+ * Reorganize the imdb data, using (movie, year) as the group or key to the data.
+ * Each movie is identified by title and year. If movies were released under the same title in two or more years,
+ * there are two or more rows for that data--one row for each year when that same movie title appeared.
+ * For each movie title and year, the actors that were cast are collected into a single list (bucket).
+ */
+castForEachMovieRaw = GROUP actorMovieAndYear BY (movie, year);
+DESCRIBE castForEachMovieRaw;
+dumpRecords = LIMIT castForEachMovieRaw 10;
+DUMP dumpRecords;
+/*
+ *
+ * For each (movie, year), for each actor, remove the duplicate movie and year fields, so that the cast list or
+ * bucket contains only actor names. Count and dump the number of rows (records).
+ */
+castForEachMovie = FOREACH castForEachMovieRaw GENERATE group, actorMovieAndYear.actor;
+DESCRIBE castForEachMovie;
+castForEachMovieAll = GROUP castForEachMovie ALL;
+castForEachMovieCount = FOREACH castForEachMovieAll GENERATE '***** castForEachMovie: number of rows ', COUNT_STAR(castForEachMovie);
+DUMP castForEachMovieCount;
+dumpRecords = LIMIT castForEachMovie 10;
+DUMP dumpRecords;
+/*
+ *
+ * So the two internal datasets are {(movie, year), weight} and {(movie, year), {(actor)}}.
+ * Produce the output by reducing the two datasets, joining the records with the same (movie, year) key and 
+ * eliminating all other records. I am doing this in two alternate ways, by COGROUP, and by JOIN.
+ * I will compare the outputs to verify that either method is equivalent to the other one.
+ */
+outputUsingJoin = JOIN highestRankedMovie BY $0, castForEachMovie BY $0;
+/*
+ *
+ * sort the output rows by year (ascending order)
+ *
+ * commented out, I could not get this sort operation to work
+ * all variations that I tried are rejected as invalid by the Pig language parser
+ * 
+ */
+ --DESCRIBE outputUsingJoin;
+ --outputUsingJoinSortedByYear = ORDER outputUsingJoin BY $0.$1;
+ --DESCRIBE outputUsingJoinSortedByYear;
+/*
+ *
+ *
+ * Count and dump the number of rows (records) resulting from the JOIN operation, then dump the
+ * data.
+ *
+ */
+DESCRIBE outputUsingJoin;
+outputUsingJoinAll = GROUP outputUsingJoin ALL;
+outputUsingJoinCount = FOREACH outputUsingJoinAll GENERATE '***** outputUsingJoin: number of rows ', COUNT_STAR(outputUsingJoin);
+DUMP outputUsingJoinCount;
+dumpRecords = LIMIT outputUsingJoin 10;
+DUMP dumpRecords;
+/*
+ *
+ * remove the output directory if it already exists--otherwise Pig script fails with an error message
+ */
+rmf PigScriptTwoOutputDirectoryUsingJOIN;
+/*
+ *
+ * output data stored in tsv-format file PigScriptTwoOutputDirectoryUsingJOIN/part-r-00000
+ *
+ */
+STORE outputUsingJoin INTO 'PigScriptTwoOutputDirectoryUsingJOIN' USING PigStorage('\t');
+/*
+ *
+ * Each row roduced by the COGROUP and JOIN operations has the group or key value (movie, year)
+ * in duplicate, one copy from each of the two datasets that were grouped (or joined).
+ * I think that this could be rectified by the following line, which I think is (should be) valid,
+ * but it aborts the Pig script with an error message. If I am on the correct side of this, then
+ * I would expect this implementation bug to be corrected in some later release of Pig. Perhaps
+ * a release that already exists, that supercedes what I am using. I am using Pig 0.11.1
+ *
+ * Aborts Pig script with following error message:
+ * ERROR 0: Scalar has more than one row in the output
+ *
+ * I tried several permuations of this (attempted) formatting operation, but I could not get any
+ * version of it to work. All aborted with various error messages.
+ */
+outputDataInDesiredFormat = FOREACH outputUsingJoin GENERATE group.year, group.movie, weight, castForEachMovie.$1;
+/*
+ *
+ * The Pig script aborts with the aforementioned error message before the remaining lines are executed.
+ *
+ */
+DESCRIBE outputDataInDesiredFormat;
+dumpRecords = LIMIT outputDataInDesiredFormat 10;
+DUMP dumpRecords;
