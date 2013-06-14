@@ -1,0 +1,57 @@
+/*
+ * RONALD INSELBERG
+ * Assignment Three, Part One
+ *
+ * Pig script to produce, for each actor, the number of movies that actor was cast in.
+ * The output is sorted by the number of movies, in descending order.
+ *
+ * The concept is identical to the Java MapReduce program of Assignment Two, Part Two, but the
+ * output data is not sorted in exactly the same order, as explained in READMEforPigScriptPartOne.
+ *
+ *
+ * Read input data in tsv ( tab-separated values) format. Record fields are actor, movie and year.
+ * USING PigStorage('\t') specifies that data fields are seperated by tab characters; this is explicit.
+ * Could have omitted this and it would work the same by default.
+ */
+actorMovieAndYear = LOAD 'imdb.tsv' USING PigStorage('\t') AS (actor:chararray, movie:chararray, year:int);
+/*
+ *
+ * eliminate non-conforming records from input data
+ */
+actorMovieAndYear = FILTER actorMovieAndYear BY actor IS NOT NULL;
+actorMovieAndYear = FILTER actorMovieAndYear BY movie IS NOT NULL;
+actorMovieAndYear = FILTER actorMovieAndYear BY year IS NOT NULL;
+/*
+ *
+ * group records by actor
+ */
+groupByActor = GROUP actorMovieAndYear BY actor;
+/*
+ *
+ * count the number of movies that each actor was cast in
+ */
+numberOfMoviesEachActorWasCastIn = FOREACH groupByActor GENERATE COUNT(actorMovieAndYear) AS numberOfMovies, group;
+/*
+ *
+ * sort by number of movies, in descending order
+ */
+numberOfMoviesEachActorWasCastIn = ORDER numberOfMoviesEachActorWasCastIn BY numberOfMovies DESC;
+/*
+ *
+ * remove the output directory if it already exists--otherwise Pig script fails with an error message
+ */
+rmf PigScriptOneOutputDirectory;
+/*
+ *
+ * output data stored in tsv-format file PigScriptOneOutputDirectory/part-r-00000
+ *
+ * USING PigStorage ('\t') specifies tab separated values format, but could have omitted this
+ * and it would generate the same (tsv) output format by default.
+ */
+STORE numberOfMoviesEachActorWasCastIn INTO 'PigScriptOneOutputDirectory' USING PigStorage('\t');
+/*
+ *
+ * dump the first 10 output records to the command line window
+ */
+dumpRecords = LIMIT numberOfMoviesEachActorWasCastIn 10;
+DUMP dumpRecords;
