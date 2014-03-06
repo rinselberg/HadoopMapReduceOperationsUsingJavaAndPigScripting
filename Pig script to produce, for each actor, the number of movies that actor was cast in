@@ -55,3 +55,25 @@ STORE numberOfMoviesEachActorWasCastIn INTO 'PigScriptOneOutputDirectory' USING 
  */
 dumpRecords = LIMIT numberOfMoviesEachActorWasCastIn 10;
 DUMP dumpRecords;
+
+
+THESE ARE JUST THE FIRST FEW OUTPUT RECORDS:
+
+38	Tatasciore, Fred
+32	Jackson, Samuel L.
+31	Harnell, Jess
+27	Willis, Bruce
+27	Damon, Matt
+26	Cummings, Jim (I)
+25	McGowan, Mickie
+25	Hanks, Tom
+25	Lynn, Sherry (I)
+25	Bergen, Bob (I)
+24	Proctor, Phil
+23	Pitt, Brad
+23	Cruise, Tom
+23	Wilson, Owen (I)
+22	Morrison, Rana
+22	Williams, Robin (I)
+22	Depp, Johnny
+22	Freeman, Morgan (I)
