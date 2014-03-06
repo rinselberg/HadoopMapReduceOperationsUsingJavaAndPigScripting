@@ -147,3 +147,12 @@ outputDataInDesiredFormat = FOREACH outputUsingJoin GENERATE group.year, group.m
 DESCRIBE outputDataInDesiredFormat;
 dumpRecords = LIMIT outputDataInDesiredFormat 10;
 DUMP dumpRecords;
+
+
+OUTPUT DATA:
+
+(Gigli,2003)	14.1829	(Gigli,2003)	{(Affleck, Ben),(Lopez, Jennifer (I))}
+(The Man,2005)	14.1976	(The Man,2005)	{(Jackson, Samuel L.),(Ferrer, Miguel (I)),(Levy, Eugene)}
+(Beginners,2010)	14.2173	(Beginners,2010)	{(McGregor, Ewan)}
+(An American Tail,1986)	14.2122	(An American Tail,1986)	{(Ross, Neil (I)),(Plummer, Christopher (I)),(Finnegan, John (I))}
+(One Hundred and One Dalmatians,1961)	0.6726	(One Hundred and One Dalmatians,1961)	{(Wickes, Mary),(Wright, Ben (I))}
